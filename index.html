@@ -1,0 +1,1105 @@
+import React, { useState, useMemo, useCallback } from "react";
+import {
+  Martini,
+  Beer,
+  GlassWater,
+  CupSoda,
+  UtensilsCrossed,
+  Wine,
+  Coffee,
+  IceCreamCone,
+  Citrus,
+  Soup,
+  Send,
+  Trash2,
+  Minus,
+  X,
+  Snowflake,
+  Flame,
+  Package,
+  Droplet,
+  Settings,
+  ArrowLeft,
+  Plus,
+  Pencil,
+  Check,
+  RotateCcw,
+  ChevronDown,
+  ChevronRight,
+  ShoppingCart,
+} from "lucide-react";
+
+/* ============================================================
+ * 图标 / 颜色 可选项（管理菜单时用点选代替打字）
+ * ============================================================ */
+const ICON_OPTIONS = [
+  { key: "martini", Icon: Martini },
+  { key: "beer", Icon: Beer },
+  { key: "glass", Icon: GlassWater },
+  { key: "cup", Icon: CupSoda },
+  { key: "food", Icon: UtensilsCrossed },
+  { key: "wine", Icon: Wine },
+  { key: "coffee", Icon: Coffee },
+  { key: "soup", Icon: Soup },
+];
+const ICON_MAP = Object.fromEntries(ICON_OPTIONS.map((o) => [o.key, o.Icon]));
+
+const COLOR_OPTIONS = [
+  "#c084fc",
+  "#fbbf24",
+  "#fb923c",
+  "#22d3ee",
+  "#a3e635",
+  "#f472b6",
+  "#60a5fa",
+  "#f87171",
+];
+
+/* ============================================================
+ * Mock 初始数据：Oasis Negro（Cafe / Bar / Cervecería）真实菜单
+ * 已核实价格；仍有少量品项（Montados、Bocadillos XXL、部分 Refrescos/
+ * Cubatas、Arroz frito con pollo、Tallarines con pollo 等）因价签叠压
+ * 无法辨认，未收录，请在"菜单管理"里手动补充核实后的价格。
+ * ============================================================ */
+const DEFAULT_CATEGORIES = [
+  { id: "desayuno", label: "早餐", icon: "coffee", accent: "#fbbf24" },
+  { id: "raciones", label: "小吃", icon: "food", accent: "#fb923c" },
+  { id: "china", label: "中餐", icon: "soup", accent: "#a3e635" },
+  { id: "sandwiches", label: "三明治", icon: "wine", accent: "#f472b6" },
+  { id: "hamburguesas", label: "汉堡", icon: "martini", accent: "#f87171" },
+  { id: "bebidas", label: "饮品", icon: "cup", accent: "#22d3ee" },
+  { id: "combos", label: "套餐", icon: "beer", accent: "#60a5fa" },
+];
+
+const DEFAULT_PRODUCTS = [
+  { id: "des1", zh: "Café", en: "", price: 1.7, category: "desayuno" },
+  { id: "des2", zh: "Café bombón", en: "", price: 2, category: "desayuno" },
+  { id: "des3", zh: "Nesquik / Colacao", en: "", price: 2, category: "desayuno" },
+  { id: "des4", zh: "Café + Tostada", en: "", price: 3, category: "desayuno" },
+  { id: "des5", zh: "Café + Churro (3 piezas)", en: "", price: 3, category: "desayuno" },
+  { id: "des6", zh: "Café + Porra (2 piezas)", en: "", price: 3, category: "desayuno" },
+  { id: "des7", zh: "Café + Croissant", en: "", price: 3, category: "desayuno" },
+  { id: "des8", zh: "Curasán / Donuts", en: "", price: 1.3, category: "desayuno" },
+  { id: "des9", zh: "Tosta con jamón serrano", en: "", price: 3, category: "desayuno" },
+  { id: "des10", zh: "Zumo natural (pequeño)", en: "", price: 2.5, category: "desayuno" },
+  { id: "des11", zh: "Zumo natural (grande)", en: "", price: 4, category: "desayuno" },
+  { id: "des12", zh: "Pincho tortilla patata (medio)", en: "", price: 3.5, category: "desayuno" },
+
+  { id: "rac1", zh: "Filete de ternera", en: "con patata o ensalada", price: 12, category: "raciones" },
+  { id: "rac2", zh: "Filete de pollo", en: "con patata o ensalada", price: 8, category: "raciones" },
+  { id: "rac3", zh: "Ensalada mixta", en: "", price: 8, category: "raciones" },
+  { id: "rac4", zh: "Jamón serrano", en: "", price: 10, category: "raciones" },
+  { id: "rac5", zh: "Nuggets de pollo", en: "~20 unidades", price: 10, category: "raciones" },
+  { id: "rac6", zh: "Fingers de pollo", en: "", price: 10, category: "raciones" },
+  { id: "rac7", zh: "Croquetas de jamón", en: "", price: 10, category: "raciones" },
+  { id: "rac8", zh: "Huevos rotos", en: "con jamón", price: 11, category: "raciones" },
+  { id: "rac9", zh: "Alitas de pollo fritas", en: "", price: 10, category: "raciones" },
+  { id: "rac10", zh: "Oreja a la plancha", en: "", price: 10, category: "raciones" },
+  { id: "rac11", zh: "Morcilla", en: "", price: 8, category: "raciones" },
+  { id: "rac12", zh: "Patatas bravas o mixtas", en: "", price: 8, category: "raciones" },
+  { id: "rac13", zh: "Patatas 6 salsas", en: "", price: 9, category: "raciones" },
+  { id: "rac14", zh: "Patatas bacon cheese", en: "", price: 9, category: "raciones" },
+  { id: "rac15", zh: "Salchipapas", en: "", price: 13, category: "raciones" },
+  { id: "rac16", zh: "Aros de calamares fritos", en: "", price: 13, category: "raciones" },
+  { id: "rac17", zh: "Rejos fritos", en: "", price: 10, category: "raciones" },
+  { id: "rac18", zh: "Chopitos fritos", en: "", price: 13, category: "raciones" },
+  { id: "rac19", zh: "Muslitos de cangrejo fritos", en: "", price: 13, category: "raciones" },
+  { id: "rac20", zh: "Boquerones fritos", en: "", price: 18, category: "raciones" },
+  { id: "rac21", zh: "Calamares a la plancha", en: "", price: 18, category: "raciones" },
+  { id: "rac22", zh: "Fritura de pescado", en: "", price: 16, category: "raciones" },
+  { id: "rac23", zh: "Gambón a la plancha", en: "", price: 16, category: "raciones" },
+
+  { id: "chi1", zh: "Mini rollo vegetal", en: "8 unidades", price: 5, category: "china" },
+  { id: "chi2", zh: "Gyozas", en: "", price: 7, category: "china" },
+  { id: "chi3", zh: "Arroz frito tres delicias", en: "", price: 6, category: "china" },
+  { id: "chi4", zh: "Arroz frito con ternera", en: "", price: 7.5, category: "china" },
+  { id: "chi5", zh: "Arroz frito con gambas", en: "", price: 7.5, category: "china" },
+  { id: "chi6", zh: "Arroz de la casa", en: "", price: 7, category: "china" },
+  { id: "chi7", zh: "Tallarines con ternera", en: "", price: 7.5, category: "china" },
+  { id: "chi8", zh: "Pollo limón", en: "", price: 8, category: "china" },
+  { id: "chi9", zh: "Pato a la naranja", en: "", price: 10, category: "china" },
+
+  { id: "san1", zh: "Sandwich mixto", en: "", price: 3.2, category: "sandwiches" },
+  { id: "san2", zh: "Sandwich mixto con huevo", en: "", price: 4.2, category: "sandwiches" },
+  { id: "san3", zh: "Sandwich vegetal", en: "pollo o atún", price: 5, category: "sandwiches" },
+  { id: "san4", zh: "Sandwich Oasis", en: "jamón/queso/bacon+patatas", price: 9, category: "sandwiches" },
+
+  { id: "ham1", zh: "Hamburguesa Oasis", en: "con patatas fritas", price: 9, category: "hamburguesas" },
+
+  { id: "beb1", zh: "Botellín", en: "", price: 1.7, category: "bebidas" },
+  { id: "beb2", zh: "Tercio", en: "", price: 2.8, category: "bebidas" },
+  { id: "beb3", zh: "Jarrita", en: "", price: 2, category: "bebidas" },
+
+  { id: "com1", zh: "5 Tercios + Ración", en: "Estrella / Galicia", price: 16, category: "combos" },
+];
+
+const INITIAL_TABLES = [
+  { id: "bar01", name: "吧台 01", status: "idle" },
+  { id: "bar02", name: "吧台 02", status: "active" },
+  { id: "bar03", name: "吧台 03", status: "idle" },
+  { id: "a1", name: "卡座 A1", status: "billing" },
+  { id: "a2", name: "卡座 A2", status: "active" },
+  { id: "b1t", name: "卡座 B1", status: "idle" },
+  { id: "b2t", name: "卡座 B2", status: "idle" },
+  { id: "vip1", name: "包间 VIP1", status: "active" },
+];
+
+const QUICK_TAGS = [
+  { id: "less_ice", label: "少冰", icon: Snowflake },
+  { id: "no_ice", label: "去冰", icon: Snowflake },
+  { id: "strong", label: "加浓", icon: Flame },
+  { id: "to_go", label: "打包", icon: Package },
+  { id: "lemon", label: "柠檬片", icon: Citrus },
+  { id: "extra_water", label: "加水", icon: Droplet },
+  { id: "less_sugar", label: "少糖", icon: IceCreamCone },
+];
+
+const STATUS_STYLE = {
+  idle: { bg: "bg-emerald-500/15", border: "border-emerald-500", text: "text-emerald-400", dot: "bg-emerald-400", label: "空闲" },
+  active: { bg: "bg-red-500/15", border: "border-red-500", text: "text-red-400", dot: "bg-red-400", label: "进行中" },
+  billing: { bg: "bg-yellow-500/15", border: "border-yellow-500", text: "text-yellow-400", dot: "bg-yellow-400", label: "待结账" },
+};
+
+const genId = (prefix) => `${prefix}_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+
+/* ============================================================
+ * 共用子组件：桌位 / 大类 / 商品网格 / 订单明细 / 备注标签
+ * 桌面端和移动端共享，避免两套布局的交互逻辑产生分叉
+ * ============================================================ */
+function TableList({ tables, selectedTableId, ordersByTable, onSelect, columns = 1 }) {
+  return (
+    <div className={`grid gap-2.5 ${columns === 2 ? "grid-cols-2" : "grid-cols-1"}`}>
+      {tables.map((table) => {
+        const style = STATUS_STYLE[table.status];
+        const isSelected = table.id === selectedTableId;
+        const lineCount = (ordersByTable[table.id] || []).length;
+        return (
+          <button
+            key={table.id}
+            onClick={() => onSelect(table.id)}
+            className={`min-h-[80px] rounded-xl border-2 px-3 py-2.5 flex flex-col justify-between transition-all active:scale-95
+              ${style.bg} ${isSelected ? "border-white ring-2 ring-white/60" : style.border}`}
+          >
+            <div className="flex items-center justify-between w-full">
+              <span className="text-base font-bold text-zinc-100">{table.name}</span>
+              {lineCount > 0 && (
+                <span className="text-xs font-bold bg-zinc-950/60 rounded-full px-2 py-0.5">{lineCount}</span>
+              )}
+            </div>
+            <span className={`text-xs font-semibold ${style.text}`}>{style.label}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function CategoryTabs({ categories, activeCategory, setActiveCategory, variant }) {
+  if (variant === "mobile") {
+    return (
+      <div className="flex gap-2 overflow-x-auto px-3 py-2.5 border-b border-zinc-800 shrink-0">
+        {categories.map((cat) => {
+          const Icon = ICON_MAP[cat.icon] || Martini;
+          const isActive = cat.id === activeCategory;
+          return (
+            <button
+              key={cat.id}
+              onClick={() => setActiveCategory(cat.id)}
+              className="shrink-0 flex items-center gap-1.5 px-3.5 py-2.5 rounded-full font-bold text-sm border-2 active:scale-95 transition-all"
+              style={{
+                backgroundColor: isActive ? `${cat.accent}26` : "#141417",
+                borderColor: isActive ? cat.accent : "#27272a",
+                color: isActive ? cat.accent : "#a1a1aa",
+              }}
+            >
+              <Icon size={16} />
+              {cat.label}
+            </button>
+          );
+        })}
+      </div>
+    );
+  }
+  return (
+    <div className="flex px-3 pt-3 gap-2 border-b border-zinc-800 pb-3">
+      {categories.map((cat) => {
+        const Icon = ICON_MAP[cat.icon] || Martini;
+        const isActive = cat.id === activeCategory;
+        return (
+          <button
+            key={cat.id}
+            onClick={() => setActiveCategory(cat.id)}
+            className="flex-1 min-h-[64px] rounded-xl flex flex-col items-center justify-center gap-1 font-bold text-sm transition-all active:scale-95 border-2"
+            style={{
+              backgroundColor: isActive ? `${cat.accent}26` : "#141417",
+              borderColor: isActive ? cat.accent : "#27272a",
+              color: isActive ? cat.accent : "#a1a1aa",
+            }}
+          >
+            <Icon size={22} />
+            {cat.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function ProductGrid({ products, currentOrder, categoryMeta, onAdd }) {
+  if (products.length === 0) {
+    return (
+      <div className="col-span-full flex items-center justify-center text-zinc-600 text-sm py-10 text-center px-4">
+        该分类下暂无商品，去"菜单管理"添加吧
+      </div>
+    );
+  }
+  return (
+    <>
+      {products.map((product) => {
+        const qtyInOrder = currentOrder.find((l) => l.productId === product.id)?.qty || 0;
+        return (
+          <button
+            key={product.id}
+            onClick={() => onAdd(product)}
+            className="relative rounded-2xl flex flex-col items-center justify-center gap-1 px-2 border-2 transition-all active:scale-95 min-w-[80px] min-h-[80px]"
+            style={{ backgroundColor: "#141417", borderColor: (categoryMeta?.accent || "#666") + "55" }}
+          >
+            {qtyInOrder > 0 && (
+              <span
+                className="absolute -top-2 -right-2 min-w-[28px] h-7 px-1.5 rounded-full text-sm font-black flex items-center justify-center text-black shadow-lg"
+                style={{ backgroundColor: categoryMeta?.accent }}
+              >
+                x{qtyInOrder}
+              </span>
+            )}
+            <span className="text-lg sm:text-xl font-bold text-zinc-50 text-center leading-tight">{product.zh}</span>
+            {product.en && <span className="text-[11px] text-zinc-500 text-center line-clamp-1 px-1">{product.en}</span>}
+            <span className="text-base sm:text-lg font-black mt-0.5" style={{ color: categoryMeta?.accent }}>
+              ¥{product.price}
+            </span>
+          </button>
+        );
+      })}
+    </>
+  );
+}
+
+function OrderLines({ order, selectedLineId, onSelectLine, onDecrement, onRemove }) {
+  if (order.length === 0) {
+    return (
+      <div className="flex-1 flex items-center justify-center text-zinc-600 text-sm text-center px-4 py-10">
+        暂无点单
+        <br />
+        点击酒水卡片开始下单
+      </div>
+    );
+  }
+  return (
+    <>
+      {order.map((line) => {
+        const isSelected = line.productId === selectedLineId;
+        return (
+          <button
+            key={line.productId}
+            onClick={() => onSelectLine(line.productId)}
+            className={`w-full rounded-xl border-2 p-2.5 text-left transition-all ${
+              isSelected ? "border-orange-400 bg-orange-400/10" : "border-zinc-800 bg-zinc-900/60"
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex flex-col">
+                <span className="text-base font-bold text-zinc-50">
+                  {line.zh}
+                  <span className="text-zinc-500 font-normal text-xs ml-1">x{line.qty}</span>
+                </span>
+                <span className="text-xs text-zinc-500">¥{line.price * line.qty}</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDecrement(line.productId);
+                  }}
+                  className="w-9 h-9 rounded-lg bg-zinc-800 flex items-center justify-center active:scale-90"
+                >
+                  <Minus size={16} />
+                </span>
+                <span
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onRemove(line.productId);
+                  }}
+                  className="w-9 h-9 rounded-lg bg-red-900/50 text-red-400 flex items-center justify-center active:scale-90"
+                >
+                  <X size={16} />
+                </span>
+              </div>
+            </div>
+            {line.notes.length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-2">
+                {line.notes.map((tagId) => {
+                  const tag = QUICK_TAGS.find((t) => t.id === tagId);
+                  if (!tag) return null;
+                  return (
+                    <span
+                      key={tagId}
+                      className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-cyan-500/15 text-cyan-300 border border-cyan-500/40"
+                    >
+                      {tag.label}
+                    </span>
+                  );
+                })}
+              </div>
+            )}
+          </button>
+        );
+      })}
+    </>
+  );
+}
+
+function QuickTagsGrid({ selectedLineId, currentOrder, onToggleTag }) {
+  const currentLine = currentOrder.find((l) => l.productId === selectedLineId);
+  return (
+    <div className="grid grid-cols-4 gap-1.5">
+      {QUICK_TAGS.map((tag) => {
+        const Icon = tag.icon;
+        const isApplied = currentLine?.notes.includes(tag.id);
+        return (
+          <button
+            key={tag.id}
+            onClick={() => onToggleTag(tag.id)}
+            disabled={!selectedLineId}
+            className={`min-h-[52px] rounded-lg flex flex-col items-center justify-center gap-0.5 text-[11px] font-bold transition-all active:scale-90 border ${
+              !selectedLineId ? "opacity-30 border-zinc-800 bg-zinc-900" : ""
+            } ${isApplied ? "bg-cyan-500/20 border-cyan-400 text-cyan-300" : "bg-zinc-900 border-zinc-700 text-zinc-300"}`}
+          >
+            <Icon size={16} />
+            {tag.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ---------------- 移动端：桌位切换全屏面板 ---------------- */
+function TableSheet({ tables, selectedTableId, ordersByTable, onSelect, onClose }) {
+  return (
+    <div className="fixed inset-0 z-40 bg-[#09090b] flex flex-col">
+      <div className="flex items-center justify-between px-4 py-3.5 border-b border-zinc-800 shrink-0">
+        <h2 className="text-lg font-bold">选择桌位</h2>
+        <button onClick={onClose} className="w-10 h-10 rounded-lg bg-zinc-800 flex items-center justify-center active:scale-90">
+          <X size={18} />
+        </button>
+      </div>
+      <div className="flex-1 overflow-y-auto p-3">
+        <TableList
+          tables={tables}
+          selectedTableId={selectedTableId}
+          ordersByTable={ordersByTable}
+          onSelect={(id) => {
+            onSelect(id);
+            onClose();
+          }}
+          columns={2}
+        />
+      </div>
+    </div>
+  );
+}
+
+/* ---------------- 移动端：当前订单全屏面板（由底部悬浮条打开）---------------- */
+function OrderSheet({
+  tableName,
+  order,
+  selectedLineId,
+  onSelectLine,
+  onDecrement,
+  onRemove,
+  onToggleTag,
+  total,
+  onSend,
+  onClear,
+  onClose,
+}) {
+  return (
+    <div className="fixed inset-0 z-40 bg-[#0f0f12] flex flex-col">
+      <div className="flex items-center justify-between px-4 py-3.5 border-b border-zinc-800 shrink-0">
+        <div>
+          <p className="text-xs text-zinc-500">当前订单</p>
+          <h2 className="text-lg font-bold">{tableName}</h2>
+        </div>
+        <button onClick={onClose} className="w-10 h-10 rounded-lg bg-zinc-800 flex items-center justify-center active:scale-90">
+          <X size={18} />
+        </button>
+      </div>
+
+      <div className="flex-1 overflow-y-auto px-3 py-2 flex flex-col gap-2">
+        <OrderLines order={order} selectedLineId={selectedLineId} onSelectLine={onSelectLine} onDecrement={onDecrement} onRemove={onRemove} />
+      </div>
+
+      <div className="px-3 py-2 border-t border-zinc-800 shrink-0">
+        <p className="text-[11px] text-zinc-500 mb-1.5">
+          {selectedLineId ? "点击标签绑定到已选中酒品 ↑" : "先选中上方一项酒水，再点标签"}
+        </p>
+        <QuickTagsGrid selectedLineId={selectedLineId} currentOrder={order} onToggleTag={onToggleTag} />
+      </div>
+
+      <div
+        className="px-3 py-3 border-t border-zinc-800 flex flex-col gap-2 shrink-0"
+        style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom, 0px))" }}
+      >
+        <div className="flex items-center justify-between px-1">
+          <span className="text-sm text-zinc-400">合计</span>
+          <span className="text-2xl font-black text-zinc-50">¥{total}</span>
+        </div>
+        <button
+          onClick={onSend}
+          disabled={order.length === 0}
+          className="min-h-[64px] rounded-2xl bg-emerald-500 disabled:bg-zinc-800 disabled:text-zinc-600 text-black text-lg font-black flex items-center justify-center gap-2 active:scale-95 transition-all"
+        >
+          <Send size={22} />
+          一键落单 / 发送吧台
+        </button>
+        <button
+          onClick={onClear}
+          disabled={order.length === 0}
+          className="min-h-[52px] rounded-2xl bg-red-950 disabled:bg-zinc-900 disabled:text-zinc-700 text-red-400 text-base font-bold flex items-center justify-center gap-2 active:scale-95 transition-all border border-red-900"
+        >
+          <Trash2 size={18} />
+          清空单据
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function EmptyMenuHint({ onManage }) {
+  return (
+    <div className="flex-1 flex flex-col items-center justify-center gap-3 text-center px-6">
+      <p className="text-zinc-300 text-lg font-bold">还没有菜单</p>
+      <p className="text-zinc-500 text-sm">去"菜单管理"录入你自己的酒水和分类</p>
+      <button onClick={onManage} className="mt-2 px-5 py-3 rounded-xl bg-orange-500 text-black font-bold active:scale-95">
+        前往菜单管理
+      </button>
+    </div>
+  );
+}
+
+/* ============================================================
+ * 主组件
+ * ============================================================ */
+export default function BarSpeedPOS() {
+  const [tables] = useState(INITIAL_TABLES);
+  const [selectedTableId, setSelectedTableId] = useState("bar02");
+
+  const [categories, setCategories] = useState(DEFAULT_CATEGORIES);
+  const [products, setProducts] = useState(DEFAULT_PRODUCTS);
+  const [activeCategory, setActiveCategory] = useState(DEFAULT_CATEGORIES[0].id);
+
+  const [ordersByTable, setOrdersByTable] = useState({});
+  const [selectedLineId, setSelectedLineId] = useState(null);
+
+  const [managing, setManaging] = useState(false);
+
+  // 移动端专用：两个全屏面板的开关
+  const [tableSheetOpen, setTableSheetOpen] = useState(false);
+  const [orderSheetOpen, setOrderSheetOpen] = useState(false);
+
+  const currentOrder = ordersByTable[selectedTableId] || [];
+  const selectedTable = tables.find((t) => t.id === selectedTableId);
+
+  const currentProducts = useMemo(
+    () => products.filter((p) => p.category === activeCategory),
+    [products, activeCategory]
+  );
+  const currentCategoryMeta = categories.find((c) => c.id === activeCategory);
+
+  const loadSampleMenu = useCallback(() => {
+    setCategories(DEFAULT_CATEGORIES);
+    setProducts(DEFAULT_PRODUCTS);
+    setActiveCategory(DEFAULT_CATEGORIES[0].id);
+  }, []);
+
+  const clearMenu = useCallback(() => {
+    if (!window.confirm("确定清空全部菜单分类和商品吗？此操作不可撤销。")) return;
+    setCategories([]);
+    setProducts([]);
+    setActiveCategory(null);
+  }, []);
+
+  /* ---------------- 核心交互 1：一键递增 ---------------- */
+  const handleAddProduct = useCallback(
+    (product) => {
+      setOrdersByTable((prev) => {
+        const list = prev[selectedTableId] || [];
+        const existingIndex = list.findIndex((line) => line.productId === product.id);
+        let newList;
+        if (existingIndex >= 0) {
+          newList = list.map((line, idx) => (idx === existingIndex ? { ...line, qty: line.qty + 1 } : line));
+        } else {
+          newList = [
+            ...list,
+            { productId: product.id, zh: product.zh, en: product.en, price: product.price, qty: 1, notes: [] },
+          ];
+        }
+        return { ...prev, [selectedTableId]: newList };
+      });
+      setSelectedLineId(product.id);
+    },
+    [selectedTableId]
+  );
+
+  /* ---------------- 核心交互 2：选中订单行 ---------------- */
+  const handleSelectLine = useCallback((productId) => {
+    setSelectedLineId((prev) => (prev === productId ? null : productId));
+  }, []);
+
+  /* ---------------- 核心交互 3：绑定/取消备注标签 ---------------- */
+  const handleToggleTag = useCallback(
+    (tagId) => {
+      if (!selectedLineId) return;
+      setOrdersByTable((prev) => {
+        const list = prev[selectedTableId] || [];
+        const newList = list.map((line) => {
+          if (line.productId !== selectedLineId) return line;
+          const hasTag = line.notes.includes(tagId);
+          return { ...line, notes: hasTag ? line.notes.filter((t) => t !== tagId) : [...line.notes, tagId] };
+        });
+        return { ...prev, [selectedTableId]: newList };
+      });
+    },
+    [selectedLineId, selectedTableId]
+  );
+
+  /* ---------------- 核心交互 4：极简删减 ---------------- */
+  const handleDecrement = useCallback(
+    (productId) => {
+      setOrdersByTable((prev) => {
+        const list = prev[selectedTableId] || [];
+        const newList = list
+          .map((line) => (line.productId === productId ? { ...line, qty: line.qty - 1 } : line))
+          .filter((line) => line.qty > 0);
+        return { ...prev, [selectedTableId]: newList };
+      });
+    },
+    [selectedTableId]
+  );
+
+  const handleRemoveLine = useCallback(
+    (productId) => {
+      setOrdersByTable((prev) => {
+        const list = prev[selectedTableId] || [];
+        return { ...prev, [selectedTableId]: list.filter((line) => line.productId !== productId) };
+      });
+      setSelectedLineId((prev) => (prev === productId ? null : prev));
+    },
+    [selectedTableId]
+  );
+
+  const handleClearOrder = useCallback(() => {
+    setOrdersByTable((prev) => ({ ...prev, [selectedTableId]: [] }));
+    setSelectedLineId(null);
+  }, [selectedTableId]);
+
+  const handleSendOrder = useCallback(() => {
+    if (currentOrder.length === 0) return;
+    alert(`已发送至吧台：${selectedTable?.name}\n共 ${currentOrder.length} 项`);
+    setSelectedLineId(null);
+    setOrderSheetOpen(false); // 移动端发送后自动收起订单面板，回到点单
+  }, [currentOrder, selectedTable]);
+
+  const total = currentOrder.reduce((sum, line) => sum + line.price * line.qty, 0);
+  const itemCount = currentOrder.reduce((sum, line) => sum + line.qty, 0);
+
+  /* ============================================================
+   * 菜单管理界面（营业前/打烊后使用，允许文字输入）
+   * ============================================================ */
+  if (managing) {
+    return (
+      <MenuManager
+        categories={categories}
+        setCategories={setCategories}
+        products={products}
+        setProducts={setProducts}
+        activeCategory={activeCategory}
+        setActiveCategory={setActiveCategory}
+        onDone={() => {
+          if (!activeCategory && categories.length > 0) setActiveCategory(categories[0].id);
+          setManaging(false);
+        }}
+        onLoadSample={loadSampleMenu}
+        onClearAll={clearMenu}
+      />
+    );
+  }
+
+  return (
+    <div className="h-screen w-full bg-[#09090b] text-zinc-100 select-none font-sans">
+      {/* ============================================================
+       * 移动端布局（默认，lg 以下显示）：单列 + 底部悬浮订单条 + 全屏面板
+       * ============================================================ */}
+      <div className="lg:hidden h-full w-full flex flex-col overflow-hidden relative">
+        {/* 顶部：桌位切换 + 菜单管理 */}
+        <div className="flex items-center justify-between px-3 py-2.5 border-b border-zinc-800 shrink-0">
+          <button
+            onClick={() => setTableSheetOpen(true)}
+            className="flex items-center gap-2 pl-2.5 pr-3 py-2 rounded-xl bg-zinc-900 border border-zinc-700 active:scale-95"
+          >
+            <span className={`w-2.5 h-2.5 rounded-full ${STATUS_STYLE[selectedTable?.status]?.dot}`} />
+            <span className="font-bold text-base">{selectedTable?.name}</span>
+            <ChevronDown size={14} className="text-zinc-500" />
+          </button>
+          <button
+            onClick={() => setManaging(true)}
+            className="w-10 h-10 rounded-lg bg-zinc-800 flex items-center justify-center active:scale-90 shrink-0"
+          >
+            <Settings size={18} className="text-zinc-400" />
+          </button>
+        </div>
+
+        {categories.length === 0 ? (
+          <EmptyMenuHint onManage={() => setManaging(true)} />
+        ) : (
+          <>
+            <CategoryTabs categories={categories} activeCategory={activeCategory} setActiveCategory={setActiveCategory} variant="mobile" />
+            <div
+              className="flex-1 overflow-y-auto p-3 grid grid-cols-2 sm:grid-cols-3 auto-rows-[110px] gap-3"
+              style={{ paddingBottom: itemCount > 0 ? "6rem" : "0.75rem" }}
+            >
+              <ProductGrid products={currentProducts} currentOrder={currentOrder} categoryMeta={currentCategoryMeta} onAdd={handleAddProduct} />
+            </div>
+          </>
+        )}
+
+        {/* 底部悬浮订单条：有商品时常驻显示，点开才是全屏订单详情 */}
+        {itemCount > 0 && (
+          <button
+            onClick={() => setOrderSheetOpen(true)}
+            className="fixed left-3 right-3 z-30 rounded-2xl bg-emerald-500 text-black px-4 py-4 flex items-center justify-between font-black active:scale-95 shadow-lg shadow-emerald-500/30"
+            style={{ bottom: "max(0.75rem, env(safe-area-inset-bottom, 0px))" }}
+          >
+            <span className="flex items-center gap-2">
+              <ShoppingCart size={20} />
+              {itemCount} 件
+            </span>
+            <span>¥{total}</span>
+            <span className="flex items-center gap-1 text-sm">
+              查看订单
+              <ChevronRight size={16} />
+            </span>
+          </button>
+        )}
+
+        {tableSheetOpen && (
+          <TableSheet
+            tables={tables}
+            selectedTableId={selectedTableId}
+            ordersByTable={ordersByTable}
+            onSelect={(id) => {
+              setSelectedTableId(id);
+              setSelectedLineId(null);
+            }}
+            onClose={() => setTableSheetOpen(false)}
+          />
+        )}
+
+        {orderSheetOpen && (
+          <OrderSheet
+            tableName={selectedTable?.name}
+            order={currentOrder}
+            selectedLineId={selectedLineId}
+            onSelectLine={handleSelectLine}
+            onDecrement={handleDecrement}
+            onRemove={handleRemoveLine}
+            onToggleTag={handleToggleTag}
+            total={total}
+            onSend={handleSendOrder}
+            onClear={handleClearOrder}
+            onClose={() => setOrderSheetOpen(false)}
+          />
+        )}
+      </div>
+
+      {/* ============================================================
+       * 桌面/平板布局（lg 及以上显示）：三栏式横屏
+       * ============================================================ */}
+      <div className="hidden lg:flex h-full w-full overflow-hidden">
+        {/* 左侧栏 20%：桌位管理 */}
+        <div className="w-[20%] min-w-[180px] h-full bg-[#0f0f12] border-r border-zinc-800 flex flex-col">
+          <div className="px-4 py-4 border-b border-zinc-800 flex items-center justify-between">
+            <div>
+              <h1 className="text-lg font-bold tracking-tight text-zinc-200">桌位总览</h1>
+              <p className="text-xs text-zinc-500 mt-0.5">点击切换当前桌位</p>
+            </div>
+            <button
+              onClick={() => setManaging(true)}
+              title="菜单管理"
+              className="w-10 h-10 rounded-lg bg-zinc-800 flex items-center justify-center active:scale-90 shrink-0"
+            >
+              <Settings size={18} className="text-zinc-400" />
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto p-3">
+            <TableList
+              tables={tables}
+              selectedTableId={selectedTableId}
+              ordersByTable={ordersByTable}
+              onSelect={(id) => {
+                setSelectedTableId(id);
+                setSelectedLineId(null);
+              }}
+              columns={1}
+            />
+          </div>
+        </div>
+
+        {/* 中间栏 55%：极速点单区 */}
+        <div className="w-[55%] h-full flex flex-col bg-[#09090b]">
+          {categories.length === 0 ? (
+            <EmptyMenuHint onManage={() => setManaging(true)} />
+          ) : (
+            <>
+              <CategoryTabs categories={categories} activeCategory={activeCategory} setActiveCategory={setActiveCategory} variant="desktop" />
+              <div className="flex-1 overflow-y-auto p-3 grid grid-cols-4 auto-rows-[120px] gap-3">
+                <ProductGrid products={currentProducts} currentOrder={currentOrder} categoryMeta={currentCategoryMeta} onAdd={handleAddProduct} />
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* 右侧栏 25%：当前订单与操作 */}
+        <div className="w-[25%] min-w-[260px] h-full bg-[#0f0f12] border-l border-zinc-800 flex flex-col">
+          <div className="px-4 py-3 border-b border-zinc-800">
+            <p className="text-xs text-zinc-500">当前操作桌位</p>
+            <h2 className="text-xl font-black text-zinc-50">{selectedTable?.name}</h2>
+          </div>
+
+          <div className="flex-1 overflow-y-auto px-3 py-2 flex flex-col gap-2">
+            <OrderLines order={currentOrder} selectedLineId={selectedLineId} onSelectLine={handleSelectLine} onDecrement={handleDecrement} onRemove={handleRemoveLine} />
+          </div>
+
+          <div className="px-3 py-2 border-t border-zinc-800">
+            <p className="text-[11px] text-zinc-500 mb-1.5">
+              {selectedLineId ? "点击标签绑定到已选中酒品 ↑" : "先选中上方一项酒水，再点标签"}
+            </p>
+            <QuickTagsGrid selectedLineId={selectedLineId} currentOrder={currentOrder} onToggleTag={handleToggleTag} />
+          </div>
+
+          <div className="px-3 py-3 border-t border-zinc-800 flex flex-col gap-2">
+            <div className="flex items-center justify-between px-1">
+              <span className="text-sm text-zinc-400">合计</span>
+              <span className="text-2xl font-black text-zinc-50">¥{total}</span>
+            </div>
+            <button
+              onClick={handleSendOrder}
+              disabled={currentOrder.length === 0}
+              className="min-h-[64px] rounded-2xl bg-emerald-500 disabled:bg-zinc-800 disabled:text-zinc-600 text-black text-lg font-black flex items-center justify-center gap-2 active:scale-95 transition-all"
+            >
+              <Send size={22} />
+              一键落单 / 发送吧台
+            </button>
+            <button
+              onClick={handleClearOrder}
+              disabled={currentOrder.length === 0}
+              className="min-h-[52px] rounded-2xl bg-red-950 disabled:bg-zinc-900 disabled:text-zinc-700 text-red-400 text-base font-bold flex items-center justify-center gap-2 active:scale-95 transition-all border border-red-900"
+            >
+              <Trash2 size={18} />
+              清空单据
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+ * 菜单管理界面
+ * 小屏下分类列表和商品列表改为上下堆叠（而不是左右两栏），
+ * 分类列表限制高度并可滚动，避免挤压商品编辑区域
+ * ============================================================ */
+function MenuManager({ categories, setCategories, products, setProducts, activeCategory, setActiveCategory, onDone, onLoadSample, onClearAll }) {
+  const [catForm, setCatForm] = useState(null);
+  const [prodForm, setProdForm] = useState(null);
+
+  const selectedCat = categories.find((c) => c.id === activeCategory) || categories[0];
+  const catProducts = products.filter((p) => p.category === selectedCat?.id);
+
+  const saveCategory = () => {
+    if (!catForm?.label?.trim()) return;
+    if (catForm.id) {
+      setCategories((prev) => prev.map((c) => (c.id === catForm.id ? { ...c, ...catForm } : c)));
+    } else {
+      const newCat = { id: genId("cat"), label: catForm.label.trim(), icon: catForm.icon || "martini", accent: catForm.accent || COLOR_OPTIONS[0] };
+      setCategories((prev) => [...prev, newCat]);
+      setActiveCategory(newCat.id);
+    }
+    setCatForm(null);
+  };
+
+  const deleteCategory = (catId) => {
+    const hasProducts = products.some((p) => p.category === catId);
+    if (hasProducts) {
+      alert("该分类下还有商品，请先删除或转移这些商品");
+      return;
+    }
+    if (!window.confirm("确定删除这个分类吗？")) return;
+    setCategories((prev) => prev.filter((c) => c.id !== catId));
+    if (activeCategory === catId) {
+      const remaining = categories.filter((c) => c.id !== catId);
+      setActiveCategory(remaining[0]?.id || null);
+    }
+  };
+
+  const saveProduct = () => {
+    if (!prodForm?.zh?.trim() || !prodForm?.price) return;
+    if (prodForm.id) {
+      setProducts((prev) => prev.map((p) => (p.id === prodForm.id ? { ...p, ...prodForm, price: Number(prodForm.price) } : p)));
+    } else {
+      setProducts((prev) => [
+        ...prev,
+        { id: genId("prod"), zh: prodForm.zh.trim(), en: (prodForm.en || "").trim(), price: Number(prodForm.price), category: selectedCat.id },
+      ]);
+    }
+    setProdForm(null);
+  };
+
+  const deleteProduct = (prodId) => {
+    if (!window.confirm("确定删除这个商品吗？")) return;
+    setProducts((prev) => prev.filter((p) => p.id !== prodId));
+  };
+
+  return (
+    <div className="h-screen w-full bg-[#09090b] text-zinc-100 flex flex-col overflow-hidden font-sans">
+      {/* 顶部栏 */}
+      <div className="flex flex-wrap items-center justify-between gap-3 px-4 sm:px-5 py-3.5 border-b border-zinc-800 shrink-0">
+        <div className="flex items-center gap-3">
+          <button onClick={onDone} className="w-10 h-10 rounded-lg bg-zinc-800 flex items-center justify-center active:scale-90 shrink-0">
+            <ArrowLeft size={18} />
+          </button>
+          <div>
+            <h1 className="text-lg font-bold">菜单管理</h1>
+            <p className="text-xs text-zinc-500 hidden sm:block">录入你自己的酒水分类和商品，保存后回到点单</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 flex-wrap">
+          {categories.length === 0 && (
+            <button onClick={onLoadSample} className="px-3.5 py-2.5 rounded-xl bg-zinc-800 text-zinc-200 text-sm font-bold flex items-center gap-1.5 active:scale-95">
+              <RotateCcw size={15} />
+              载入示例菜单
+            </button>
+          )}
+          {categories.length > 0 && (
+            <button onClick={onClearAll} className="px-3.5 py-2.5 rounded-xl bg-red-950 border border-red-900 text-red-400 text-sm font-bold flex items-center gap-1.5 active:scale-95">
+              <Trash2 size={15} />
+              清空全部
+            </button>
+          )}
+          <button onClick={onDone} className="px-4 py-2.5 rounded-xl bg-emerald-500 text-black text-sm font-black flex items-center gap-1.5 active:scale-95">
+            <Check size={16} />
+            完成，回到点单
+          </button>
+        </div>
+      </div>
+
+      <div className="flex-1 flex flex-col lg:flex-row overflow-y-auto lg:overflow-hidden">
+        {/* 分类列表：移动端在上方、限制高度；桌面端固定左栏 */}
+        <div className="w-full lg:w-[30%] lg:min-w-[260px] border-b lg:border-b-0 lg:border-r border-zinc-800 flex flex-col shrink-0">
+          <div className="p-3 flex items-center justify-between">
+            <span className="text-sm font-bold text-zinc-400">酒水分类</span>
+            <button onClick={() => setCatForm({})} className="w-8 h-8 rounded-lg bg-zinc-800 flex items-center justify-center active:scale-90">
+              <Plus size={16} />
+            </button>
+          </div>
+
+          {catForm !== null && (
+            <div className="mx-3 mb-3 p-3 rounded-xl bg-zinc-900 border border-zinc-700 flex flex-col gap-3">
+              <input
+                autoFocus
+                type="text"
+                placeholder="分类名称，如：鸡尾酒"
+                value={catForm.label || ""}
+                onChange={(e) => setCatForm({ ...catForm, label: e.target.value })}
+                className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2.5 text-base outline-none focus:border-orange-400"
+              />
+              <div>
+                <p className="text-xs text-zinc-500 mb-1.5">选择图标</p>
+                <div className="grid grid-cols-8 gap-1.5">
+                  {ICON_OPTIONS.map(({ key, Icon }) => (
+                    <button
+                      key={key}
+                      onClick={() => setCatForm({ ...catForm, icon: key })}
+                      className={`h-9 rounded-lg flex items-center justify-center border ${
+                        catForm.icon === key ? "border-orange-400 bg-orange-400/15" : "border-zinc-700 bg-zinc-950"
+                      }`}
+                    >
+                      <Icon size={16} />
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <p className="text-xs text-zinc-500 mb-1.5">选择强调色</p>
+                <div className="grid grid-cols-8 gap-1.5">
+                  {COLOR_OPTIONS.map((color) => (
+                    <button
+                      key={color}
+                      onClick={() => setCatForm({ ...catForm, accent: color })}
+                      className="h-9 rounded-lg border-2"
+                      style={{ backgroundColor: color, borderColor: catForm.accent === color ? "#fff" : "transparent" }}
+                    />
+                  ))}
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <button onClick={saveCategory} className="flex-1 py-2.5 rounded-lg bg-emerald-500 text-black font-bold text-sm active:scale-95">
+                  保存
+                </button>
+                <button onClick={() => setCatForm(null)} className="flex-1 py-2.5 rounded-lg bg-zinc-800 text-zinc-300 font-bold text-sm active:scale-95">
+                  取消
+                </button>
+              </div>
+            </div>
+          )}
+
+          <div className="max-h-[42vh] lg:max-h-none overflow-y-auto px-3 pb-3 flex flex-col gap-2">
+            {categories.length === 0 && catForm === null && (
+              <p className="text-zinc-600 text-sm text-center mt-6 px-2">暂无分类，点右上角 + 新建，或点上方"载入示例菜单"快速体验</p>
+            )}
+            {categories.map((cat) => {
+              const Icon = ICON_MAP[cat.icon] || Martini;
+              const isActive = cat.id === selectedCat?.id;
+              const count = products.filter((p) => p.category === cat.id).length;
+              return (
+                <div
+                  key={cat.id}
+                  onClick={() => setActiveCategory(cat.id)}
+                  className={`rounded-xl border-2 p-3 flex items-center justify-between cursor-pointer transition-all ${isActive ? "border-white/70" : "border-zinc-800"}`}
+                  style={{ backgroundColor: isActive ? `${cat.accent}1a` : "#141417" }}
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: `${cat.accent}33`, color: cat.accent }}>
+                      <Icon size={17} />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-bold text-sm truncate">{cat.label}</p>
+                      <p className="text-xs text-zinc-500">{count} 款商品</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setCatForm(cat);
+                      }}
+                      className="w-8 h-8 rounded-lg bg-zinc-800 flex items-center justify-center active:scale-90"
+                    >
+                      <Pencil size={13} />
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deleteCategory(cat.id);
+                      }}
+                      className="w-8 h-8 rounded-lg bg-red-950 text-red-400 flex items-center justify-center active:scale-90"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* 商品列表：移动端在下方自然滚动；桌面端占据剩余空间 */}
+        <div className="flex-1 flex flex-col lg:overflow-hidden">
+          <div className="p-3 flex items-center justify-between border-b border-zinc-800 shrink-0">
+            <span className="text-sm font-bold text-zinc-400 truncate">{selectedCat ? `「${selectedCat.label}」的商品` : "请先在上方选择或新建一个分类"}</span>
+            {selectedCat && (
+              <button onClick={() => setProdForm({})} className="px-3 py-2 rounded-lg bg-zinc-800 text-sm font-bold flex items-center gap-1.5 active:scale-90 shrink-0">
+                <Plus size={15} />
+                新增商品
+              </button>
+            )}
+          </div>
+
+          {prodForm !== null && selectedCat && (
+            <div className="mx-3 mt-3 p-3 rounded-xl bg-zinc-900 border border-zinc-700 grid grid-cols-1 sm:grid-cols-3 gap-3 sm:items-end shrink-0">
+              <div>
+                <p className="text-xs text-zinc-500 mb-1">中文名</p>
+                <input
+                  autoFocus
+                  type="text"
+                  placeholder="如：莫吉托"
+                  value={prodForm.zh || ""}
+                  onChange={(e) => setProdForm({ ...prodForm, zh: e.target.value })}
+                  className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2.5 text-base outline-none focus:border-orange-400"
+                />
+              </div>
+              <div>
+                <p className="text-xs text-zinc-500 mb-1">英文名（可选）</p>
+                <input
+                  type="text"
+                  placeholder="如：Mojito"
+                  value={prodForm.en || ""}
+                  onChange={(e) => setProdForm({ ...prodForm, en: e.target.value })}
+                  className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2.5 text-base outline-none focus:border-orange-400"
+                />
+              </div>
+              <div>
+                <p className="text-xs text-zinc-500 mb-1">价格</p>
+                <input
+                  type="number"
+                  placeholder="如：48"
+                  value={prodForm.price || ""}
+                  onChange={(e) => setProdForm({ ...prodForm, price: e.target.value })}
+                  className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2.5 text-base outline-none focus:border-orange-400"
+                />
+              </div>
+              <div className="sm:col-span-3 flex gap-2">
+                <button onClick={saveProduct} className="flex-1 py-2.5 rounded-lg bg-emerald-500 text-black font-bold text-sm active:scale-95">
+                  保存
+                </button>
+                <button onClick={() => setProdForm(null)} className="flex-1 py-2.5 rounded-lg bg-zinc-800 text-zinc-300 font-bold text-sm active:scale-95">
+                  取消
+                </button>
+              </div>
+            </div>
+          )}
+
+          <div className="flex-1 lg:overflow-y-auto p-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 auto-rows-min">
+            {selectedCat && catProducts.length === 0 && prodForm === null && (
+              <p className="col-span-full text-zinc-600 text-sm text-center mt-6">这个分类下还没有商品，点右上角新增</p>
+            )}
+            {catProducts.map((p) => (
+              <div key={p.id} className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-3 flex flex-col gap-1.5">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="font-bold text-base truncate">{p.zh}</p>
+                    <p className="text-xs text-zinc-500 truncate">{p.en || "—"}</p>
+                  </div>
+                  <p className="font-black shrink-0" style={{ color: selectedCat.accent }}>
+                    ¥{p.price}
+                  </p>
+                </div>
+                <div className="flex gap-1.5 mt-1">
+                  <button onClick={() => setProdForm(p)} className="flex-1 py-1.5 rounded-lg bg-zinc-800 text-xs font-bold flex items-center justify-center gap-1 active:scale-95">
+                    <Pencil size={12} />
+                    编辑
+                  </button>
+                  <button onClick={() => deleteProduct(p.id)} className="flex-1 py-1.5 rounded-lg bg-red-950 text-red-400 text-xs font-bold flex items-center justify-center gap-1 active:scale-95">
+                    <Trash2 size={12} />
+                    删除
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
